@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crofton Blood Pressure Tracker</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:1100px;margin:auto;padding:20px;color:#222}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{display:block;font-weight:bold;margin-bottom:4px}
+input{width:100%;padding:8px;box-sizing:border-box}
+button{padding:10px 14px;border:none;border-radius:4px;cursor:pointer;margin:4px}
+.btn-primary{background:#005eb8;color:#fff}
+.btn-secondary{background:#e8eef7;color:#005eb8}
+.btn-danger{background:#e74c3c;color:#fff}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th,td{border:1px solid #ccc;padding:8px;text-align:left}
+th{background:#f4f4f4}
+.note{color:#666;font-size:12px}
+</style>
+</head>
+<body>
+<h1>Crofton Blood Pressure Tracker</h1>
+
+<div class="grid">
+<div><label for="patientName">Patient Name</label><input id="patientName" type="text"></div>
+<div><label for="patientDOB">Date of Birth</label><input id="patientDOB" type="date"><div class="note">Emailed as DD/MM/YYYY</div></div>
+<div><label for="patientAddress">Address</label><input id="patientAddress" type="text"></div>
+</div>
+
+<br>
+
+<div class="grid">
+<div><label for="readingDate">Date</label><input id="readingDate" type="date"></div>
+<div><label for="systolic">Systolic</label><input id="systolic" type="number"></div>
+<div><label for="diastolic">Diastolic</label><input id="diastolic" type="number"></div>
+<div><label for="notes">Notes</label><input id="notes" type="text"></div>
+</div>
+
+<p>
+<button class="btn-primary" onclick="addReading()">Add Reading</button>
+<button class="btn-secondary" onclick="sendEmail()">Send Readings via Email</button>
+<button class="btn-secondary" onclick="clearReadings()">Clear All</button>
+</p>
+
+<table id="tbl">
+<thead>
+<tr><th>Date (DD-MM-YYYY)</th><th>Systolic</th><th>Diastolic</th><th>Notes</th><th>Action</th></tr>
+</thead>
+<tbody></tbody>
+<tfoot>
+<tr><td>Average</td><td id="avgS">-</td><td id="avgD">-</td><td colspan="2"></td></tr>
+</tfoot>
+</table>
+
+<script>
+function isoToDash(v){
+ if(!v) return '';
+ const p=v.split('-');
+ return p[2]+'-'+p[1]+'-'+p[0];
+}
+
+function isoToSlash(v){
+ if(!v) return '';
+ const p=v.split('-');
+ return p[2]+'/'+p[1]+'/'+p[0];
+}
+
+document.getElementById('readingDate').value = new Date().toISOString().split('T')[0];
+
+function addReading(){
+ const date=isoToDash(document.getElementById('readingDate').value);
+ const sys=document.getElementById('systolic').value;
+ const dia=document.getElementById('diastolic').value;
+ const notes=document.getElementById('notes').value;
+
+ if(!date || !sys || !dia){
+   alert('Please complete Date, Systolic and Diastolic');
+   return;
+ }
+
+ const tr=document.createElement('tr');
+ tr.innerHTML='<td>'+date+'</td><td>'+sys+'</td><td>'+dia+'</td><td>'+notes+'</td><td><button class="btn-danger" onclick="deleteRow(this)">Delete</button></td>';
+ document.querySelector('#tbl tbody').appendChild(tr);
+
+ updateAvg();
+
+ document.getElementById('systolic').value='';
+ document.getElementById('diastolic').value='';
+ document.getElementById('notes').value='';
+ document.getElementById('systolic').focus();
+}
+
+function deleteRow(btn){
+ btn.closest('tr').remove();
+ updateAvg();
+}
+
+function clearReadings(){
+ document.querySelector('#tbl tbody').innerHTML='';
+ updateAvg();
+}
+
+function updateAvg(){
+ const rows=document.querySelectorAll('#tbl tbody tr');
+ let s=0,d=0,c=0;
+ rows.forEach(function(r){
+   s += Number(r.cells[1].textContent) || 0;
+   d += Number(r.cells[2].textContent) || 0;
+   c++;
+ });
+ document.getElementById('avgS').textContent = c ? Math.round(s/c) : '-';
+ document.getElementById('avgD').textContent = c ? Math.round(d/c) : '-';
+}
+
+function sendEmail(){
+ const name=document.getElementById('patientName').value;
+ const dob=isoToSlash(document.getElementById('patientDOB').value);
+ const address=document.getElementById('patientAddress').value;
+
+ let body='Patient Details:
+';
+ body+='Name: '+name+'
+';
+ body+='Date of Birth: '+dob+'
+';
+ body+='Address: '+address+'
+
+';
+ body+='Blood Pressure Readings:
+';
+
+ document.querySelectorAll('#tbl tbody tr').forEach(function(r,i){
+   body+=(i+1)+'. Date: '+r.cells[0].textContent.split('-').join('/')+
+   ', Systolic: '+r.cells[1].textContent+
+   ', Diastolic: '+r.cells[2].textContent+
+   (r.cells[3].textContent ? ', Notes: '+r.cells[3].textContent : '')+
+   '
+';
+ });
+
+ body+='
+Average Systolic: '+document.getElementById('avgS').textContent+'
+';
+ body+='Average Diastolic: '+document.getElementById('avgD').textContent;
+
+ window.location.href='mailto:crofton.admin@nhs.net?subject='+encodeURIComponent('Blood Pressure Readings')+'&body='+encodeURIComponent(body);
+}
+</script>
+</body>
+</html>
